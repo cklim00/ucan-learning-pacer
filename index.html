@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>跨域自主配速員｜UCAN Learning Pacer</title>
+<style>
+:root{
+  --bg:#0b0f17;--card:#121a28;--muted:#95a3b8;--text:#eaf0ff;
+  --line:#22304a;--accent:#7aa2ff;--good:#45d19e;--warn:#ffcc66;--bad:#ff6b6b;
+  --module:#bdf5d1;--req:#ffe4b0;--ele:#9fc6ff;--pink:#ffb3e6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;
+  background:linear-gradient(180deg,#0b0f17,#070a11);color:var(--text);min-height:100vh}
+
+/* ── 頂部 Header ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;border-bottom:1px solid var(--line);background:rgba(11,15,23,.95);
+  position:sticky;top:0;z-index:100;backdrop-filter:blur(8px)}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  background:radial-gradient(circle at 30% 30%,#9bb6ff,#4d6bff 50%,#17213a);
+  box-shadow:0 8px 24px rgba(122,162,255,.25)}
+.brand h1{font-size:16px;color:#dbe6ff}
+.brand .sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* ── 步驟導航 ── */
+.steps{display:flex;gap:4px}
+.step-btn{padding:8px 18px;border-radius:999px;border:1px solid var(--line);
+  background:transparent;color:var(--muted);font-size:13px;cursor:pointer;
+  transition:all .2s;display:flex;align-items:center;gap:6px}
+.step-btn.active{background:linear-gradient(135deg,rgba(47,73,255,.35),rgba(122,162,255,.25));
+  border-color:rgba(122,162,255,.6);color:#a8c4ff}
+.step-btn.done{border-color:rgba(69,209,158,.5);color:#45d19e}
+.step-btn .num{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.1);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.step-btn.active .num{background:rgba(122,162,255,.4)}
+.step-btn.done .num{background:rgba(69,209,158,.3)}
+
+/* ── 頁面容器 ── */
+.page{display:none;padding:24px}
+.page.active{display:block}
+.wrap{max-width:1300px;margin:0 auto}
+
+/* ── 通用 Card ── */
+.card{background:rgba(18,26,40,.9);border:1px solid rgba(34,48,74,.85);
+  border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+.card h2{font-size:14px;color:#dbe6ff;margin-bottom:12px}
+
+/* ── Step 1: UCAN 輸入 ── */
+.input-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:16px}
+.ucan-item{display:flex;flex-direction:column;gap:8px}
+.ucan-item label{font-size:13px;color:#cfe0ff;display:flex;justify-content:space-between}
+.ucan-item label span{color:var(--accent);font-weight:700;min-width:36px;text-align:right}
+.ucan-item input[type=range]{width:100%;accent-color:var(--accent);height:6px;border-radius:3px;cursor:pointer}
+.ucan-item input[type=number]{width:72px;padding:6px 8px;background:var(--card);
+  color:var(--text);border:1px solid var(--line);border-radius:8px;font-size:14px;text-align:center}
+.pr-row{display:flex;align-items:center;gap:10px}
+.preset-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.preset-btn{font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);
+  background:rgba(25,36,58,.7);color:#cfe0ff;cursor:pointer;transition:all .15s}
+.preset-btn:hover{border-color:var(--accent);color:var(--accent)}
+.start-btn{margin-top:24px;padding:14px 40px;font-size:15px;border-radius:12px;
+  background:linear-gradient(135deg,#2f49ff,#7aa2ff);border:none;color:#fff;
+  cursor:pointer;font-weight:700;letter-spacing:.5px;transition:opacity .15s}
+.start-btn:hover{opacity:.88}
+.tip-box{background:rgba(69,209,158,.08);border:1px solid rgba(69,209,158,.25);
+  border-radius:12px;padding:14px;font-size:12px;color:#a0dfbe;line-height:1.7;margin-top:16px}
+
+/* ── Step 2: 輪廓 ── */
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{display:flex;gap:10px;align-items:center;padding:10px;
+  border-radius:14px;background:rgba(25,36,58,.7);border:1px solid rgba(34,48,74,.6)}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.kpi .lbl{font-size:12px;color:var(--muted)}
+.kpi .val{font-size:16px;font-weight:700;margin-top:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+.svgbox{width:100%;aspect-ratio:1.8/1;background:#0e1422;
+  border:1px solid rgba(34,48,74,.7);border-radius:14px;overflow:hidden}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chip{font-size:12px;color:#cfe0ff;background:rgba(25,36,58,.7);
+  border:1px solid rgba(34,48,74,.6);padding:5px 10px;border-radius:999px}
+.reco-list{display:flex;flex-direction:column;gap:10px}
+.reco-item{padding:10px;border-radius:14px;background:rgba(25,36,58,.65);border:1px solid rgba(34,48,74,.55)}
+.reco-item .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.reco-item .name{font-weight:700}
+.badge{font-size:12px;padding:4px 8px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06)}
+.why{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.45}
+.next-btn{margin-top:16px;padding:10px 24px;border-radius:10px;
+  background:linear-gradient(135deg,#2f49ff,#7aa2ff);border:none;color:#fff;
+  cursor:pointer;font-size:13px;font-weight:600}
+
+/* ── Step 3: 課程地圖 + AI ── */
+.map-ai-layout{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+.map-col{display:flex;flex-direction:column;gap:12px}
+.ai-col{display:flex;flex-direction:column;gap:12px}
+.map{display:grid;gap:10px}
+.yearRow{display:grid;grid-template-columns:60px 1fr;gap:10px;align-items:start}
+.yearLabel{padding:8px 6px;border-radius:10px;background:rgba(25,36,58,.55);
+  border:1px solid rgba(34,48,74,.55);color:#cfe0ff;font-weight:700;text-align:center;font-size:12px}
+.tracks{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:8px}
+.track{min-height:100px;border-radius:12px;background:#0e1422;
+  border:1px dashed rgba(149,163,184,.2);padding:8px}
+.trackTitle{font-size:11px;color:var(--muted);margin-bottom:6px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.15);font-size:11px;line-height:1.2;margin:4px 0;
+  cursor:pointer;user-select:none;transition:all .1s;width:100%}
+.pill:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,0,0,.25);border-color:rgba(122,162,255,.55)}
+.pill.active{outline:2px solid rgba(122,162,255,.6);border-color:rgba(122,162,255,.9)}
+.pill.ucan-match{box-shadow:0 0 0 2px rgba(69,209,158,.6)!important;border-color:rgba(69,209,158,.8)!important}
+.pill .pname{font-weight:700;color:#0b0f17;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill .mini{font-size:10px;color:rgba(11,15,23,.7)}
+.type-module{background:color-mix(in oklab,var(--module) 85%,#fff 15%)}
+.type-req{background:color-mix(in oklab,var(--req) 85%,#fff 15%)}
+.type-ele{background:color-mix(in oklab,var(--ele) 85%,#fff 15%)}
+.type-special{background:color-mix(in oklab,var(--pink) 85%,#fff 15%)}
+.dom-ai{background:#a8c8ff}.dom-hum{background:#ffe0a8}.dom-inno{background:#ffb3e6}
+.dom-semi{background:#d4bfff}.dom-sus{background:#a9ecc9}.dom-other{background:#c9d4e4}
+.sm.mode-on{border-color:rgba(122,162,255,.85);color:#a8c4ff;background:rgba(47,73,255,.28);font-weight:700}
+.sw{width:10px;height:10px;border-radius:3px;display:inline-block;border:1px solid rgba(255,255,255,.18)}
+.legend{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:11px;flex-wrap:wrap}
+.match-legend{display:flex;align-items:center;gap:6px;font-size:11px;color:#45d19e;
+  margin-top:6px;padding:6px 12px;background:rgba(69,209,158,.08);border-radius:8px;
+  border:1px solid rgba(69,209,158,.2)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+select,input[type=text]{background:rgba(18,26,40,.9);color:var(--text);
+  border:1px solid rgba(34,48,74,.85);border-radius:8px;padding:7px 10px;
+  outline:none;font-size:12px}
+button.sm{padding:7px 14px;border-radius:8px;border:1px solid var(--line);
+  background:rgba(25,36,58,.7);color:#cfe0ff;cursor:pointer;font-size:12px}
+.kv{display:grid;grid-template-columns:100px 1fr;gap:6px;font-size:12px}
+.kv b{color:#dbe6ff}
+.divider{height:1px;background:rgba(34,48,74,.7);margin:10px 0}
+
+/* ── AI Chat ── */
+.ai-badge{font-size:11px;background:linear-gradient(135deg,rgba(69,209,158,.2),rgba(122,162,255,.2));
+  border:1px solid rgba(69,209,158,.4);color:#45d19e;padding:3px 9px;border-radius:999px}
+.chat-wrap{display:flex;flex-direction:column;height:480px}
+.chatlog{flex:1;overflow-y:auto;border-radius:12px;background:#0e1422;
+  border:1px solid rgba(34,48,74,.7);padding:10px;scroll-behavior:smooth}
+.bubble{max-width:92%;padding:9px 12px;border-radius:12px;margin:5px 0;
+  font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.me{margin-left:auto;background:rgba(122,162,255,.18);border:1px solid rgba(122,162,255,.35)}
+.bot{background:rgba(25,36,58,.75);border:1px solid rgba(34,48,74,.7)}
+.bot.typing{opacity:.6;font-style:italic}
+.chatbar{display:flex;gap:8px;margin-top:8px}
+.chatbar input{flex:1;font-size:12px;background:rgba(18,26,40,.9);color:var(--text);
+  border:1px solid rgba(34,48,74,.85);border-radius:8px;padding:8px 10px;outline:none}
+button.primary{background:linear-gradient(135deg,#2f49ff,#7aa2ff);border:none;
+  color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600}
+button:disabled{opacity:.4;cursor:not-allowed}
+.quick-btns{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.qbtn{font-size:11px;padding:4px 10px;border-radius:999px;background:rgba(122,162,255,.1);
+  border:1px solid rgba(122,162,255,.3);color:#a8c4ff;cursor:pointer;transition:all .15s}
+.qbtn:hover{background:rgba(122,162,255,.2)}
+.footnote{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5}
+
+@media(max-width:1100px){
+  .profile-grid,.map-ai-layout{grid-template-columns:1fr}
+  .tracks{grid-template-columns:repeat(2,1fr)}
+  .chat-wrap{height:380px}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="logo"></div>
+    <div>
+      <h1>跨域自主配速員（UCAN Learning Pacer）</h1>
+      <div class="sub">元智大學（全校版）｜教務處 × 藝術與設計學系 共同推動｜以 UCAN 共通職能為核心，提供個人化跨域學習建議</div>
+    </div>
+  </div>
+  <div class="steps">
+    <button class="step-btn active" id="sBtn1" onclick="goStep(1)">
+      <span class="num">1</span> 輸入 UCAN
+    </button>
+    <button class="step-btn" id="sBtn2" onclick="goStep(2)" disabled>
+      <span class="num">2</span> 我的輪廓
+    </button>
+    <button class="step-btn" id="sBtn3" onclick="goStep(3)" disabled>
+      <span class="num">3</span> 課程地圖 + AI
+    </button>
+  </div>
+</div>
+
+<!-- ======== STEP 1: UCAN 輸入 ======== -->
+<div class="page active" id="page1">
+<div class="wrap" style="max-width:700px">
+  <div class="card" style="margin-top:8px">
+    <h2 style="font-size:18px;margin-bottom:4px">輸入你的 UCAN 共通職能 PR 值</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">
+      登入 <a href="https://ucan.moe.edu.tw" target="_blank" style="color:var(--accent)">UCAN 系統</a> 
+      → 查看「共通職能」各向度 PR 值（1~99）後填入下方。
+    </p>
+    <div class="preset-row">
+      <span style="font-size:12px;color:var(--muted);align-self:center">快速範例：</span>
+      <button class="preset-btn" onclick="loadPreset('design')">設計學院學生</button>
+      <button class="preset-btn" onclick="loadPreset('art')">藝術專長學生</button>
+      <button class="preset-btn" onclick="loadPreset('eng')">工程學院學生</button>
+      <button class="preset-btn" onclick="loadPreset('mgmt')">管理學院學生</button>
+      <button class="preset-btn" onclick="loadPreset('transfer')">轉學生</button>
+    </div>
+    <div class="input-grid" id="ucanInputs"></div>
+    <div class="tip-box">
+      💡 <b>PR 值說明：</b>PR 50 代表全國平均水準。PR 75 表示你比 75% 的人強。<br/>
+      找不到 UCAN 資料？可先選上方「快速範例」體驗系統功能，或依印象估填。
+    </div>
+    <div style="text-align:center">
+      <button class="start-btn" onclick="confirmUCAN()">確認並查看我的學習輪廓 →</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ======== STEP 2: 個人輪廓 ======== -->
+<div class="page" id="page2">
+<div class="wrap">
+  <div class="profile-grid">
+
+    <!-- 左：圖表 -->
+    <div class="card">
+      <h2>我的學習輪廓（UCAN 共通職能 PR）</h2>
+      <div class="kpi-row" id="kpis"></div>
+      <div class="two">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">雷達圖（PR 越高越靠外）</div>
+          <div class="svgbox"><svg id="radar" viewBox="0 0 520 300" width="100%" height="100%"></svg></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">能力 × 自律 象限（PR=50 為參考線）</div>
+          <div class="svgbox"><svg id="quad" viewBox="0 0 520 300" width="100%" height="100%"></svg></div>
+          <div class="chips" id="insightChips"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右：路線建議 -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <h2>跨域路線推薦（Top 3）</h2>
+        <div class="reco-list" id="recoList"></div>
+      </div>
+      <div class="card" style="font-size:12px;color:var(--muted)">
+        <b style="color:#dbe6ff;display:block;margin-bottom:8px">你的 UCAN 數值摘要</b>
+        <div id="ucanSummary" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;line-height:1.8"></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="next-btn" onclick="goStep(1)" style="background:rgba(25,36,58,.9);border:1px solid var(--line)">← 重新輸入</button>
+        <button class="next-btn" onclick="goStep(3)">前往課程地圖 + AI 對話 →</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- ======== STEP 3: 課程地圖 + AI ======== -->
+<div class="page" id="page3">
+<div class="wrap">
+<div class="map-ai-layout">
+
+  <!-- 左：課程地圖 -->
+  <div class="map-col">
+    <div class="card">
+      <div class="controls" style="margin-bottom:8px">
+        <span style="font-size:12px;color:var(--muted)">課程層級：</span>
+        <button class="sm mode-on" id="modeSchool" onclick="switchMode('school')">🏫 全校探索跨域</button>
+        <button class="sm" id="modeDept" onclick="switchMode('dept')">🎨 藝設系（系級示範）</button>
+      </div>
+      <div class="controls">
+        <input type="text" id="search" placeholder="搜尋課名…" oninput="applyFilters()"/>
+        <select id="filterType" onchange="applyFilters()"></select>
+        <select id="filterYear" onchange="applyFilters()"></select>
+        <button class="sm" onclick="resetMap()">清除</button>
+        <button class="primary" onclick="randomPick()">隨機</button>
+      </div>
+      <div class="legend" id="legendBox"></div>
+      <div class="match-legend">✦ 綠色外框 = 與你的 UCAN 優勢高度匹配的課程</div>
+    </div>
+    <div class="card">
+      <h2 id="mapTitle">全校探索跨域課程地圖（領域 × 學期）</h2>
+      <div class="map" id="map"></div>
+    </div>
+    <!-- 課程詳情 -->
+    <div class="card" id="detailCard">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <h2 style="margin:0">課程詳情</h2>
+        <span class="badge" id="selBadge">點選左側課程</span>
+      </div>
+      <div id="selHint" style="font-size:12px;color:var(--muted);margin-top:8px">
+        點選課程卡片後，此處顯示能力對應（UCAN）與跨院建議。
+      </div>
+      <div class="divider"></div>
+      <div class="kv" id="courseKV" style="display:none"></div>
+      <div class="chips" id="cUCAN"></div>
+      <div id="cExternalWrap" style="display:none">
+        <div class="divider"></div>
+        <h2 style="margin:0 0 8px 0" id="cExtTitle">建議搭配課程</h2>
+        <div id="cExternal"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右：AI 對話 -->
+  <div class="ai-col">
+    <div class="card" style="position:sticky;top:80px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">AI 學習顧問</h2>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="sm" id="keyBtn" onclick="setApiKey()" title="設定 Gemini API 金鑰（只存在你這台電腦的瀏覽器）">🔑</button>
+          <span class="ai-badge">Gemini 2.5 Flash</span>
+        </div>
+      </div>
+      <div class="chat-wrap">
+        <div class="chatlog" id="chatlog"></div>
+        <div class="quick-btns" id="quickBtns"></div>
+        <div class="chatbar">
+          <input id="chatInput" placeholder="問我路線、課程、下一步…" onkeydown="if(event.key==='Enter')sendChat()"/>
+          <button class="primary" id="chatSend" onclick="sendChat()">送出</button>
+        </div>
+      </div>
+      <div class="footnote">✦ AI 已載入你的 UCAN 輪廓與課程地圖，回答依你個人資料生成。</div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<script>
+/* ============================================================
+   全域狀態
+   ============================================================ */
+const UCAN_DIMS = ["溝通表達","持續學習","人際互動","團隊合作","問題解決","創新","工作責任及紀律","資訊科技應用"];
+let ucanData = {};     // 學生 UCAN PR 值
+let selectedCourseId = null;
+let mapMode = "school";   // school = 全校探索跨域 | dept = 藝設系系級示範
+
+/* ★★★ 部署設定：貼上 GAS 中繼 Web App 網址（.../exec）後，學生免金鑰即可使用 AI 顧問。
+       留空字串 "" 則退回「本機金鑰模式」（🔑 按鈕，開發測試用）。 ★★★ */
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxg9NddUL5b7kgUOp00Y9nTbnKcm4qaSgbVHxjYXYjL5WQtNH8bvFXjgxIx_CSjBqvE0A/exec";
+let chatHistory = [];
+let isLoading = false;
+
+const PRESETS = {
+  design: {溝通表達:75,持續學習:52,人際互動:41,團隊合作:56,問題解決:33,創新:56,工作責任及紀律:52,資訊科技應用:35},
+  art:    {溝通表達:35,持續學習:79,人際互動:72,團隊合作:75,問題解決:51,創新:83,工作責任及紀律:76,資訊科技應用:66},
+  eng:    {溝通表達:38,持續學習:62,人際互動:45,團隊合作:58,問題解決:72,創新:52,工作責任及紀律:66,資訊科技應用:78},
+  mgmt:   {溝通表達:68,持續學習:55,人際互動:72,團隊合作:70,問題解決:52,創新:48,工作責任及紀律:60,資訊科技應用:45},
+  transfer:{溝通表達:44,持續學習:44,人際互動:24,團隊合作:8,問題解決:26,創新:48,工作責任及紀律:25,資訊科技應用:41}
+};
+
+/* ============================================================
+   Step 1: UCAN 輸入介面
+   ============================================================ */
+function buildUCANInputs(){
+  const wrap = document.getElementById("ucanInputs");
+  wrap.innerHTML = "";
+  UCAN_DIMS.forEach(d=>{
+    const val = ucanData[d] || 50;
+    const div = document.createElement("div");
+    div.className = "ucan-item";
+    div.innerHTML = `
+      <label>${d}<span id="lbl_${d}">${val}</span></label>
+      <div class="pr-row">
+        <input type="range" min="1" max="99" value="${val}" id="r_${d}"
+          oninput="syncPR('${d}',this.value)"/>
+        <input type="number" min="1" max="99" value="${val}" id="n_${d}"
+          oninput="syncPR('${d}',this.value)" style="width:60px;padding:4px 6px;
+          background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:6px;text-align:center"/>
+      </div>`;
+    wrap.appendChild(div);
+  });
+}
+
+function syncPR(dim, val){
+  val = Math.max(1, Math.min(99, parseInt(val)||1));
+  document.getElementById(`r_${dim}`).value = val;
+  document.getElementById(`n_${dim}`).value = val;
+  document.getElementById(`lbl_${dim}`).textContent = val;
+  ucanData[dim] = val;
+}
+
+function loadPreset(key){
+  const p = PRESETS[key];
+  UCAN_DIMS.forEach(d=>syncPR(d, p[d]));
+  ucanData = {...p};
+}
+
+function confirmUCAN(){
+  UCAN_DIMS.forEach(d=>{
+    ucanData[d] = parseInt(document.getElementById(`n_${d}`).value)||50;
+  });
+  renderProfile();
+  goStep(2);
+}
+
+buildUCANInputs();
+
+/* ============================================================
+   計算工具
+   ============================================================ */
+function avg(a,b){return (a+b)/2}
+function computeAxes(){
+  return {
+    ability: avg(ucanData["問題解決"]||50, ucanData["創新"]||50),
+    selfReg: avg(ucanData["持續學習"]||50, ucanData["工作責任及紀律"]||50)
+  };
+}
+
+const TRACKS_RECO = [
+  {key:"AI × 智慧科技",desc:"生成式 AI、機器人、智慧應用的動手實作",demands:{資訊科技應用:55,問題解決:50,創新:50},
+   courses:[{name:"生成式AI與跨域創新實作",why:["資訊科技應用","創新"]},{name:"智慧型機器人導論",why:["資訊科技應用","持續學習"]}]},
+  {key:"人文社會探索",desc:"語言、文化、社會觀察與表達力養成",demands:{溝通表達:50,持續學習:50,人際互動:45},
+   courses:[{name:"易經卜卦：解惑人生",why:["持續學習","創新"]},{name:"策略溝通－賦能專業面試技巧",why:["溝通表達","人際互動"]}]},
+  {key:"永續與社會實踐",desc:"USR、淨零碳、走進場域的行動學習",demands:{團隊合作:50,人際互動:45,工作責任及紀律:45},
+   courses:[{name:"大學社會責任與社區發展",why:["人際互動","團隊合作"]},{name:"淨零碳規劃與管理",why:["工作責任及紀律","問題解決"]}]},
+  {key:"創新創生實作",desc:"從像素空間到 3D 模擬，做出自己的作品",demands:{創新:50,資訊科技應用:45,團隊合作:45},
+   courses:[{name:"像素風虛擬互動空間設計",why:["創新","資訊科技應用"]},{name:"3Ｄ電腦模擬與決策",why:["資訊科技應用","問題解決"]}]},
+  {key:"半導體產業敲門磚",desc:"看懂台灣關鍵產業的技術與供應鏈",demands:{問題解決:50,持續學習:50,工作責任及紀律:45},
+   courses:[{name:"探索半導體世界",why:["持續學習","問題解決"]},{name:"半導體產業與製程概論",why:["持續學習","溝通表達"]}]}
+];
+
+function pickTracks(){
+  return TRACKS_RECO.map(t=>{
+    const keys=Object.keys(t.demands);
+    const score=keys.reduce((s,k)=>s+Math.min(1,(ucanData[k]||50)/t.demands[k]),0)/keys.length;
+    return {...t,score};
+  }).sort((a,b)=>b.score-a.score);
+}
+
+function buildInsights(){
+  const u=ucanData;
+  const {ability,selfReg}=computeAxes();
+  const chips=[];
+  if((u["持續學習"]||50)<35||(u["工作責任及紀律"]||50)<35) chips.push({text:"需配速支持：先穩定學習節奏",tone:"warn"});
+  if((u["團隊合作"]||50)<25||(u["人際互動"]||50)<25) chips.push({text:"建議加入低壓協作/同儕小組",tone:"warn"});
+  if((u["創新"]||50)>=60&&(u["問題解決"]||50)<40) chips.push({text:"創意強：補問題拆解方法",tone:"good"});
+  if((u["資訊科技應用"]||50)<35) chips.push({text:"先補數位工具：低門檻課 + 小專題",tone:"warn"});
+  if(ability>=55&&selfReg>=55) chips.push({text:"穩定型：可挑戰跨域專題/競賽",tone:"good"});
+  if(chips.length===0) chips.push({text:"中性輪廓：以興趣路線選課，每月回顧一次",tone:"good"});
+  return chips;
+}
+
+/* ============================================================
+   Step 2: 渲染輪廓
+   ============================================================ */
+const DIMS = UCAN_DIMS;
+
+function drawRadar(){
+  const svg=document.getElementById("radar"); svg.innerHTML="";
+  const cx=160,cy=150,R=110;
+  [20,40,60,80,100].forEach(l=>{
+    const r=R*(l/100),pts=DIMS.map((_,i)=>{const a=(Math.PI*2)*(i/DIMS.length)-Math.PI/2;return[cx+r*Math.cos(a),cy+r*Math.sin(a)];});
+    const p=document.createElementNS("http://www.w3.org/2000/svg","polygon");
+    p.setAttribute("points",pts.map(p=>p.join(",")).join(" "));p.setAttribute("fill","none");p.setAttribute("stroke","rgba(34,48,74,.7)");p.setAttribute("stroke-width","1");svg.appendChild(p);
+  });
+  DIMS.forEach((d,i)=>{
+    const a=(Math.PI*2)*(i/DIMS.length)-Math.PI/2;
+    const line=document.createElementNS("http://www.w3.org/2000/svg","line");
+    line.setAttribute("x1",cx);line.setAttribute("y1",cy);line.setAttribute("x2",cx+R*Math.cos(a));line.setAttribute("y2",cy+R*Math.sin(a));line.setAttribute("stroke","rgba(34,48,74,.8)");svg.appendChild(line);
+    const t=document.createElementNS("http://www.w3.org/2000/svg","text");
+    t.setAttribute("x",cx+(R+18)*Math.cos(a));t.setAttribute("y",cy+(R+18)*Math.sin(a));t.setAttribute("fill","rgba(234,240,255,.9)");t.setAttribute("font-size","11");
+    t.setAttribute("text-anchor",(Math.cos(a)>0.2)?"start":(Math.cos(a)<-0.2?"end":"middle"));
+    t.textContent=d.replace("工作責任及紀律","責任/紀律").replace("資訊科技應用","資訊科技");svg.appendChild(t);
+  });
+  const vals=DIMS.map(d=>(ucanData[d]||50)/100);
+  const pts=vals.map((v,i)=>{const a=(Math.PI*2)*(i/DIMS.length)-Math.PI/2;return[cx+(R*v)*Math.cos(a),cy+(R*v)*Math.sin(a)];});
+  const poly=document.createElementNS("http://www.w3.org/2000/svg","polygon");
+  poly.setAttribute("points",pts.map(p=>p.join(",")).join(" "));poly.setAttribute("fill","rgba(122,162,255,.22)");poly.setAttribute("stroke","rgba(122,162,255,.75)");poly.setAttribute("stroke-width","2");svg.appendChild(poly);
+  const {ability,selfReg}=computeAxes();
+  [[320,55,"快速摘要","#cfe0ff","12","700"],[320,77,`能力向度：${ability.toFixed(1)}`,"rgba(149,163,184,.95)","12",""],[320,95,`自律向度：${selfReg.toFixed(1)}`,"rgba(149,163,184,.95)","12",""]].forEach(([x,y,text,fill,size,w])=>{
+    const t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",x);t.setAttribute("y",y);t.setAttribute("fill",fill);t.setAttribute("font-size",size);if(w)t.setAttribute("font-weight",w);t.textContent=text;svg.appendChild(t);
+  });
+}
+
+function drawQuadrant(){
+  const svg=document.getElementById("quad");svg.innerHTML="";
+  const W=520,H=300,pad=45,x0=pad,y0=H-pad,x1=W-pad,y1=pad;
+  const ax=(xA,yA,xB,yB,s)=>{const l=document.createElementNS("http://www.w3.org/2000/svg","line");[[" x1",xA],["y1",yA],["x2",xB],["y2",yB],["stroke",s],["stroke-width","1.4"]].forEach(([k,v])=>l.setAttribute(k.trim(),v));svg.appendChild(l);};
+  ax(x0,y0,x1,y0,"rgba(34,48,74,.9)");ax(x0,y0,x0,y1,"rgba(34,48,74,.9)");
+  const mX=v=>x0+(v/100)*(x1-x0),mY=v=>y0-(v/100)*(y0-y1);
+  ax(mX(50),y0,mX(50),y1,"rgba(122,162,255,.6)");ax(x0,mY(50),x1,mY(50),"rgba(122,162,255,.6)");
+  const mkT=(x,y,text,anchor)=>{const t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",x);t.setAttribute("y",y);t.setAttribute("fill","rgba(149,163,184,.95)");t.setAttribute("font-size","12");t.setAttribute("text-anchor",anchor||"start");t.textContent=text;svg.appendChild(t);};
+  mkT(x0,y1+14,"自律↑");mkT(x1,y0+28,"能力→","end");mkT(mX(50)+6,y1+14,"PR=50");
+  const {ability,selfReg}=computeAxes();
+  const c=document.createElementNS("http://www.w3.org/2000/svg","circle");
+  c.setAttribute("cx",mX(ability));c.setAttribute("cy",mY(selfReg));c.setAttribute("r","7");c.setAttribute("fill","rgba(69,209,158,.9)");c.setAttribute("stroke","rgba(69,209,158,1)");svg.appendChild(c);
+  mkT(mX(ability)+10,mY(selfReg)-10,"你的位置");
+}
+
+function renderProfile(){
+  const {ability,selfReg}=computeAxes();
+  // KPIs
+  const kpiWrap=document.getElementById("kpis");kpiWrap.innerHTML="";
+  [{k:"能力向度",v:ability,c:"var(--accent)"},{k:"自律向度",v:selfReg,c:"var(--good)"},
+   {k:"創新",v:ucanData["創新"]||50,c:"var(--accent)"},{k:"工作責任",v:ucanData["工作責任及紀律"]||50,c:"var(--warn)"}]
+  .forEach(x=>{const d=document.createElement("div");d.className="kpi";d.innerHTML=`<div class="dot" style="background:${x.c}"></div><div><div class="lbl">${x.k}</div><div class="val">${Number(x.v).toFixed(1)}</div></div>`;kpiWrap.appendChild(d);});
+  drawRadar();drawQuadrant();
+  // Chips
+  const chipWrap=document.getElementById("insightChips");chipWrap.innerHTML="";
+  buildInsights().forEach(c=>{const s=document.createElement("span");s.className="chip";s.style.borderColor=c.tone==="good"?"rgba(69,209,158,.55)":"rgba(255,204,102,.55)";s.style.background=c.tone==="good"?"rgba(69,209,158,.10)":"rgba(255,204,102,.10)";s.textContent=c.text;chipWrap.appendChild(s);});
+  // Reco
+  const rl=document.getElementById("recoList");rl.innerHTML="";
+  pickTracks().slice(0,3).forEach((t,i)=>{
+    const pct=Math.round(t.score*100);const tone=pct>=80?"var(--good)":pct>=60?"var(--warn)":"var(--bad)";
+    const c=t.courses[i%t.courses.length];
+    const el=document.createElement("div");el.className="reco-item";
+    el.innerHTML=`<div class="top"><div class="name">${i+1}. ${t.key}</div><div class="badge" style="border-color:${tone};color:${tone}">適配 ${pct}%</div></div>
+    <div class="why">${t.desc}</div><div class="why"><b>推薦課程：</b>${c.name}（${c.why.join("、")}）</div>`;
+    rl.appendChild(el);
+  });
+  // UCAN Summary
+  const sum=document.getElementById("ucanSummary");sum.innerHTML="";
+  UCAN_DIMS.forEach(d=>{const v=ucanData[d]||50;const cl=v>=65?"color:#45d19e":v>=40?"":"color:#ff6b6b";sum.innerHTML+=`<span style="${cl}">${d}：<b>${v}</b></span>`;});
+}
+
+/* ============================================================
+   Step 3: 課程地圖資料
+   ============================================================ */
+const COURSE_TRACKS = ["創作基礎","數位跨域","成果展演","素養建構","理論支持","跨域延伸"];
+const DOMAINS=[["人工智慧","dom-ai"],["人文關懷","dom-hum"],["創新創生","dom-inno"],["半導體","dom-semi"],["永續發展","dom-sus"],["其他","dom-other"]];
+const SEMS=[["1132","113-2"],["1141","114-1"],["1142","114-2"],["1151","115-1"]];
+/* 全校探索跨域課程（教務處提供 1132–1142 課程大綱與修課清冊）UCAN 對應依課程目標判定 */
+const EXPLORE_COURSES=[
+  {id:"EXZ004",name:"未來互動設計：機器與人之間",sem:"1132",domain:"人工智慧",teacher:"林楚卿",n:15,ucan:["資訊科技應用","創新","問題解決"],desc:"人機互動 × 運算設計，創作互動藝術作品"},
+  {id:"EXZ005",name:"數位構築設計：實虛空間想像",sem:"1132",domain:"人工智慧",teacher:"林楚卿",n:7,ucan:["資訊科技應用","創新","團隊合作"],desc:"數位構築 × 光雕投影，實虛空間設計"},
+  {id:"EXA101",name:"基礎機器人入門",sem:"1141",domain:"人工智慧",teacher:"—",n:15,ucan:["資訊科技應用","問題解決","團隊合作"],desc:"機械手臂構造、運動控制與任務實作"},
+  {id:"EXB101",name:"生成式AI與跨域創新實作",sem:"1141",domain:"人工智慧",teacher:"熊甘霖",n:28,ucan:["資訊科技應用","創新","溝通表達"],desc:"生成式 AI × 無程式碼工具，跨域創新原型"},
+  {id:"EXE301",name:"未來互動設計：機器與人之間",sem:"1141",domain:"人工智慧",teacher:"林楚卿",n:14,ucan:["資訊科技應用","創新","問題解決"],desc:"人機互動 × 運算設計，創作互動藝術作品"},
+  {id:"EXB201",name:"探索智慧機器人：設計、模擬與實作",sem:"1142",domain:"人工智慧",teacher:"林柏江",n:7,ucan:["資訊科技應用","問題解決","創新"],desc:"智慧機器人設計、模擬與實體操作"},
+  {id:"EXB401",name:"智慧型機器人導論",sem:"1142",domain:"人工智慧",teacher:"胡馬雍",n:13,ucan:["資訊科技應用","持續學習","創新"],desc:"AI × Robotics 導論（EMI 英語授課）"},
+  {id:"EXE501",name:"策略溝通－賦能專業面試技巧",sem:"1141",domain:"人文關懷",teacher:"周若漢",n:15,ucan:["溝通表達","人際互動","團隊合作"],desc:"EMI × PBL，專業面試策略溝通"},
+  {id:"EXE401",name:"社會、政策與資料：科學的探索",sem:"1141",domain:"人文關懷",teacher:"—",n:15,ucan:["持續學習","問題解決","溝通表達"],desc:"社政 × 中語共授，資料與社會的科學探索"},
+  {id:"EXE101",name:"AI輕鬆學日語",sem:"1142",domain:"人文關懷",teacher:"—",n:39,ucan:["溝通表達","持續學習","資訊科技應用"],desc:"AI 工具輔助日語入門：五十音到日常會話"},
+  {id:"EXE201",name:"易經卜卦：解惑人生",sem:"1142",domain:"人文關懷",teacher:"顏樞",n:39,ucan:["持續學習","問題解決","創新"],desc:"易經 × 變易思維，古典智慧的現代決策"},
+  {id:"EXD103",name:"投資理財簡介",sem:"1142",domain:"人文關懷",teacher:"林友嵐",n:29,ucan:["持續學習","問題解決","工作責任及紀律"],desc:"理財素養：認識投資工具與風險"},
+  {id:"EXC301",name:"像素風虛擬互動空間設計",sem:"1141",domain:"創新創生",teacher:"—",n:25,ucan:["資訊科技應用","創新","團隊合作"],desc:"Aseprite × Tiled × Gather Town 像素空間"},
+  {id:"EXA201",name:"半導體產業與製程概論",sem:"1142",domain:"半導體",teacher:"江建志",n:5,ucan:["持續學習","問題解決","溝通表達"],desc:"半導體供應鏈全貌：IC 設計到封測"},
+  {id:"EXB301",name:"探索半導體世界",sem:"1142",domain:"半導體",teacher:"陳念波",n:10,ucan:["持續學習","問題解決","資訊科技應用"],desc:"科普半導體 × 動手做實驗"},
+  {id:"EXZ001",name:"大學社會責任與社區發展",sem:"1132",domain:"永續發展",teacher:"王瑄",n:3,ucan:["人際互動","團隊合作","持續學習"],desc:"USR × SDGs × 地方創生，場域體驗實踐"},
+  {id:"EXZ002",name:"淨零碳規劃與管理",sem:"1132",domain:"永續發展",teacher:"王瑄",n:18,ucan:["持續學習","問題解決","工作責任及紀律"],desc:"淨零碳規劃方法，對接 iPAS 淨零碳管理師"},
+  {id:"EXD101",name:"租稅實務",sem:"1141",domain:"其他",teacher:"秦嘉偉",n:17,ucan:["持續學習","問題解決","工作責任及紀律"],desc:"生活稅務素養：綜所稅、房地合一、贈與稅"},
+  {id:"EXC101",name:"資訊安全意識推廣",sem:"1142",domain:"其他",teacher:"—",n:5,ucan:["資訊科技應用","工作責任及紀律","問題解決"],desc:"日常資安風險辨識與自我保護"},
+  {id:"EXA301",name:"3Ｄ電腦模擬與決策",sem:"1142",domain:"其他",teacher:"任恒毅",n:6,ucan:["資訊科技應用","問題解決","工作責任及紀律"],desc:"3D 模擬建模 × 流程分析與決策"},
+  /* 115-1 課程：自全校課程查詢系統（訪客版）同步，含探索跨域微學程標籤 */
+  {id:"EXA101-1151",code:"EXA101",name:"基礎機器人入門",sem:"1151",domain:"人工智慧",teacher:"陳傳生",ucan:["資訊科技應用","問題解決","團隊合作"],micro:["智慧科技應用","數位媒體設計"],unit:"機械系",desc:"機械手臂構造、運動控制與任務實作（A 時段）"},
+  {id:"EXB101-1151",code:"EXB101",name:"生成式AI與跨域創新實作",sem:"1151",domain:"人工智慧",teacher:"熊甘霖",ucan:["資訊科技應用","創新","溝通表達"],micro:["智慧科技應用","數位媒體設計","數位跨語"],unit:"電機系",desc:"生成式 AI × 無程式碼工具，跨域創新原型（B 時段）"},
+  {id:"EXD104-1151",code:"EXD104",name:"人工智慧與永續發展",sem:"1151",domain:"永續發展",teacher:"劉德安",ucan:["持續學習","問題解決","資訊科技應用"],unit:"管理學院",desc:"AI 應用於永續議題（多項 SDG 對應）"},
+  {id:"EXD201-1151",code:"EXD201",name:"AI 驅動的商業模式創新",sem:"1151",domain:"創新創生",teacher:"陳氏清玄",ucan:["創新","問題解決","溝通表達"],unit:"管院英專",desc:"AI × 商業模式創新（英語授課）"},
+  {id:"EXF102-1151",code:"EXF102",name:"烹飪化學",sem:"1151",domain:"其他",teacher:"馬誠",ucan:["持續學習","問題解決","創新"],unit:"護理系",desc:"烹飪中的化學原理（英語授課）"}
+];
+function domClass(d){return (DOMAINS.find(x=>x[0]===d)||[,"dom-other"])[1]}
+function semLabel(s){return (SEMS.find(x=>x[0]===s)||[,s])[1]}
+function findCourse(id){return COURSES.find(x=>x.id===id)||EXPLORE_COURSES.find(x=>x.id===id)}
+function isExplore(c){return !!c&&!!c.domain}
+const COURSES = [
+  {id:"m_interact",year:0,track:"數位跨域",type:"module",name:"互動科技跨域（模組）",recYear:"大一~大三",ucan:["資訊科技應用","創新","問題解決"],tags:["模組"]},
+  {id:"m_contemporary",year:0,track:"數位跨域",type:"module",name:"當代藝術創作（模組）",recYear:"大一~大三",ucan:["創新","溝通表達"],tags:["模組"]},
+  {id:"m_curation",year:0,track:"成果展演",type:"module",name:"策展管理（模組）",recYear:"大二~大四",ucan:["溝通表達","團隊合作","工作責任及紀律"],tags:["模組"]},
+  {id:"m_ai",year:0,track:"跨域延伸",type:"module",name:"AI 運算設計（模組）",recYear:"大二~大四",ucan:["資訊科技應用","問題解決","持續學習"],tags:["模組","AI"]},
+  {id:"m_humanities",year:0,track:"素養建構",type:"module",name:"人文美學（模組）",recYear:"大一~大四",ucan:["溝通表達","持續學習"],tags:["模組"]},
+  {id:"m_history",year:0,track:"理論支持",type:"module",name:"史論（模組）",recYear:"大一~大四",ucan:["持續學習","溝通表達"],tags:["模組"]},
+  {id:"y1_design12",year:1,track:"創作基礎",type:"req",name:"設計創作（一）～（二）",recYear:"大一",ucan:["創新","工作責任及紀律"],tags:["必修"]},
+  {id:"y1_art12",year:1,track:"創作基礎",type:"req",name:"藝術創作（一）～（二）",recYear:"大一",ucan:["創新","持續學習"],tags:["必修"]},
+  {id:"y1_digital12",year:1,track:"數位跨域",type:"req",name:"設計電腦繪圖（一）～（二）",recYear:"大一",ucan:["資訊科技應用","工作責任及紀律"],tags:["必修"]},
+  {id:"y1_anim",year:1,track:"數位跨域",type:"ele",name:"動畫原理與實務",recYear:"大一",ucan:["持續學習","問題解決","創新"],tags:["選修"]},
+  {id:"y1_sketch",year:1,track:"成果展演",type:"ele",name:"素描",recYear:"大一",ucan:["工作責任及紀律","持續學習"],tags:["選修"]},
+  {id:"y1_body",year:1,track:"素養建構",type:"ele",name:"肢體美學",recYear:"大一",ucan:["人際互動","溝通表達"],tags:["選修"]},
+  {id:"y1_digitalHuman",year:1,track:"跨域延伸",type:"req",name:"數位人文應用",recYear:"大一~大二",ucan:["資訊科技應用","溝通表達","持續學習"],tags:["必修"]},
+  {id:"y2_design34",year:2,track:"創作基礎",type:"req",name:"設計創作（三）～（四）",recYear:"大二",ucan:["創新","工作責任及紀律"],tags:["必修"]},
+  {id:"y2_art34",year:2,track:"創作基礎",type:"req",name:"藝術創作（三）～（四）",recYear:"大二",ucan:["創新","持續學習"],tags:["必修"]},
+  {id:"y2_advDigital",year:2,track:"數位跨域",type:"req",name:"進階設計電腦繪圖",recYear:"大二",ucan:["資訊科技應用","工作責任及紀律"],tags:["必修"]},
+  {id:"y2_digitalAssist",year:2,track:"數位跨域",type:"ele",name:"電腦輔助設計與製造",recYear:"大二",ucan:["資訊科技應用","問題解決"],tags:["選修"]},
+  {id:"y2_photo",year:2,track:"數位跨域",type:"ele",name:"攝影實務",recYear:"大二",ucan:["溝通表達","創新"],tags:["選修"]},
+  {id:"y2_multimedia",year:2,track:"數位跨域",type:"ele",name:"多媒材裝置",recYear:"大二",ucan:["創新","問題解決","團隊合作"],tags:["選修"]},
+  {id:"y2_exhibitStudy",year:2,track:"成果展演",type:"ele",name:"當代展覽觀察與研究",recYear:"大二",ucan:["持續學習","溝通表達"],tags:["選修"]},
+  {id:"y2_artHistE",year:2,track:"理論支持",type:"req",name:"東亞藝術史",recYear:"大二",ucan:["持續學習","溝通表達"],tags:["必修"]},
+  {id:"y2_artHistW",year:2,track:"理論支持",type:"req",name:"西美藝術史",recYear:"大二",ucan:["持續學習","溝通表達"],tags:["必修"]},
+  {id:"y3_studio_design",year:3,track:"創作基礎",type:"req",name:"藝術與設計創作：設計組",recYear:"大三",ucan:["創新","工作責任及紀律","問題解決"],tags:["必修"]},
+  {id:"y3_studio_art",year:3,track:"創作基礎",type:"req",name:"藝術與設計創作：藝術組",recYear:"大三",ucan:["創新","持續學習","溝通表達"],tags:["必修"]},
+  {id:"y3_interactive",year:3,track:"數位跨域",type:"special",name:"互動科技裝置",recYear:"大三",ucan:["資訊科技應用","問題解決","創新"],tags:["跨域"]},
+  {id:"y3_immersive",year:3,track:"數位跨域",type:"ele",name:"沉浸式互動體驗",recYear:"大三",ucan:["創新","資訊科技應用","人際互動"],tags:["選修"]},
+  {id:"y3_exhibitPlan",year:3,track:"成果展演",type:"ele",name:"藝術創作展示與規劃",recYear:"大三",ucan:["團隊合作","工作責任及紀律","溝通表達"],tags:["選修"]},
+  {id:"y3_aiThink",year:3,track:"跨域延伸",type:"special",name:"AI 創意設計思考",recYear:"大三",ucan:["創新","問題解決","溝通表達","持續學習"],tags:["跨域","AI"]},
+  {id:"y3_designHist",year:3,track:"理論支持",type:"ele",name:"設計史",recYear:"大三",ucan:["持續學習","溝通表達"],tags:["選修"]},
+  {id:"y4_studio_design34",year:4,track:"創作基礎",type:"req",name:"藝術與設計創作（三）～（四）：設計組",recYear:"大四",ucan:["工作責任及紀律","團隊合作","溝通表達"],tags:["必修"]},
+  {id:"y4_studio_art34",year:4,track:"創作基礎",type:"req",name:"藝術與設計創作（三）～（四）：藝術組",recYear:"大四",ucan:["溝通表達","持續學習","創新"],tags:["必修"]},
+  {id:"y4_craft",year:4,track:"理論支持",type:"ele",name:"工藝與雕塑",recYear:"大四",ucan:["創新","工作責任及紀律"],tags:["選修"]},
+  {id:"y4_thought",year:4,track:"理論支持",type:"ele",name:"當代藝術與設計思潮",recYear:"大四",ucan:["持續學習","溝通表達"],tags:["選修"]}
+];
+
+/* UCAN 匹配：此課程的 UCAN 向度裡，學生 PR >= 55 的算匹配 */
+function isUCANMatch(course){
+  return (course.ucan||[]).some(d=>(ucanData[d]||50)>=55);
+}
+
+function recommendCross(course){
+  const target=new Set(course.ucan||[]);
+  const pool=isExplore(course)
+    ? [...EXPLORE_COURSES.filter(c=>c.id!==course.id).map(c=>({c,src:"explore"})),
+       ...COURSES.map(c=>({c,src:"dept"}))]
+    : EXPLORE_COURSES.map(c=>({c,src:"explore"}));
+  const seen=new Set([course.name]);
+  return pool.map(x=>({...x,hit:(x.c.ucan||[]).filter(u=>target.has(u)).length}))
+    .sort((a,b)=>b.hit-a.hit)
+    .filter(x=>!seen.has(x.c.name)&&seen.add(x.c.name)).slice(0,3)
+    .map(x=>({name:x.c.name,src:x.src,
+      badge:x.src==="explore"?`探索跨域｜${x.c.domain}`:`藝設系｜${typeLabel(x.c.type)}`,
+      why:x.hit>0?`共同訓練：${(x.c.ucan||[]).filter(u=>target.has(u)).join("、")}`:"可作為跨域補強"}));
+}
+
+function typeLabel(t){return t==="module"?"模組":t==="req"?"必修":t==="ele"?"選修":"跨域/專題"}
+function typeClass(t){return t==="module"?"type-module":t==="req"?"type-req":t==="ele"?"type-ele":"type-special"}
+
+function switchMode(mode){
+  mapMode=mode;selectedCourseId=null;
+  document.getElementById("modeSchool").classList.toggle("mode-on",mode==="school");
+  document.getElementById("modeDept").classList.toggle("mode-on",mode==="dept");
+  document.getElementById("mapTitle").textContent=mode==="school"
+    ?"全校探索跨域課程地圖（領域 × 學期）":"藝設系課程地圖（系級示範：年級 × 六軌）";
+  const ft=document.getElementById("filterType"),fy=document.getElementById("filterYear");
+  if(mode==="school"){
+    ft.innerHTML='<option value="all">全部領域</option>'+DOMAINS.map(d=>`<option value="${d[0]}">${d[0]}</option>`).join("");
+    fy.innerHTML='<option value="all">全部學期</option>'+SEMS.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join("");
+  }else{
+    ft.innerHTML='<option value="all">全部類型</option><option value="module">模組</option><option value="req">必修</option><option value="ele">選修</option><option value="special">跨域/專題</option>';
+    fy.innerHTML='<option value="all">全部年級</option><option value="1">大一</option><option value="2">大二</option><option value="3">大三</option><option value="4">大四</option>';
+  }
+  const lg=document.getElementById("legendBox");
+  lg.innerHTML=mode==="school"
+    ? DOMAINS.map(d=>`<span><span class="sw ${d[1]}" style="border-color:rgba(0,0,0,.15)"></span>${d[0]}</span>`).join("")
+    : '<span><span class="sw" style="background:var(--module)"></span>模組</span><span><span class="sw" style="background:var(--req)"></span>必修</span><span><span class="sw" style="background:var(--ele)"></span>選修</span><span><span class="sw" style="background:var(--pink)"></span>跨域/專題</span>';
+  document.getElementById("search").value="";
+  buildMap();resetDetail();
+}
+
+function buildMap(){
+  const mapEl=document.getElementById("map");mapEl.innerHTML="";
+  if(mapMode==="school"){
+    DOMAINS.forEach(([dom,cls])=>{
+      const row=document.createElement("div");row.className="yearRow";
+      const yl=document.createElement("div");yl.className="yearLabel";yl.textContent=dom;row.appendChild(yl);
+      const tw=document.createElement("div");tw.className="tracks";tw.style.gridTemplateColumns=`repeat(${SEMS.length},1fr)`;
+      SEMS.forEach(([sem,label])=>{
+        const tel=document.createElement("div");tel.className="track";
+        const tt=document.createElement("div");tt.className="trackTitle";tt.textContent=label+" 學期";tel.appendChild(tt);
+        EXPLORE_COURSES.filter(c=>c.domain===dom&&c.sem===sem).forEach(c=>tel.appendChild(makePill(c)));
+        tw.appendChild(tel);
+      });
+      row.appendChild(tw);mapEl.appendChild(row);
+    });
+  }else{
+    [0,1,2,3,4].forEach(y=>{
+      const yearRow=document.createElement("div");yearRow.className="yearRow";
+      const yl=document.createElement("div");yl.className="yearLabel";yl.textContent=y===0?"模組":`大${["","一","二","三","四"][y]}`;yearRow.appendChild(yl);
+      const tw=document.createElement("div");tw.className="tracks";
+      COURSE_TRACKS.forEach(track=>{
+        const tel=document.createElement("div");tel.className="track";tel.dataset.track=track;
+        const tt=document.createElement("div");tt.className="trackTitle";tt.textContent=track;tel.appendChild(tt);
+        COURSES.filter(c=>c.year===y&&c.track===track).forEach(c=>tel.appendChild(makePill(c)));
+        tw.appendChild(tel);
+      });
+      yearRow.appendChild(tw);mapEl.appendChild(yearRow);
+    });
+  }
+  applyFilters();
+}
+
+function makePill(c){
+  const pill=document.createElement("div");
+  const cls=isExplore(c)?domClass(c.domain):typeClass(c.type);
+  pill.className=`pill ${cls}${isUCANMatch(c)?" ucan-match":""}`;
+  pill.dataset.id=c.id;
+  const mini=isExplore(c)?`${semLabel(c.sem)}｜${c.teacher||"—"}`:typeLabel(c.type);
+  pill.innerHTML=`<div style="min-width:0"><div class="pname" title="${c.name}">${c.name}</div><div class="mini">${mini}</div></div>`;
+  pill.addEventListener("click",()=>selectCourse(c.id));
+  return pill;
+}
+
+function applyFilters(){
+  const q=(document.getElementById("search").value||"").toLowerCase();
+  const t=document.getElementById("filterType").value;
+  const y=document.getElementById("filterYear").value;
+  document.querySelectorAll(".pill").forEach(p=>{
+    const c=findCourse(p.dataset.id);if(!c)return;
+    let ok=true;
+    if(q) ok=ok&&c.name.toLowerCase().includes(q);
+    if(mapMode==="school"){
+      if(t!=="all") ok=ok&&c.domain===t;
+      if(y!=="all") ok=ok&&c.sem===y;
+    }else{
+      if(t!=="all") ok=ok&&c.type===t;
+      if(y!=="all") ok=ok&&String(c.year)===String(y);
+    }
+    p.style.display=ok?"inline-flex":"none";
+    p.classList.toggle("active",p.dataset.id===selectedCourseId);
+  });
+}
+
+function selectCourse(id){
+  selectedCourseId=id;applyFilters();
+  const c=findCourse(id);if(!c) return;
+  const kv=document.getElementById("courseKV");kv.style.display="grid";
+  if(isExplore(c)){
+    document.getElementById("selBadge").textContent=`探索跨域｜${c.domain}`;
+    kv.innerHTML=`<b>課程名稱</b><div>${c.name}</div><b>課號</b><div>${c.code||c.id}</div><b>領域別</b><div>${c.domain}</div><b>開課學期</b><div>${semLabel(c.sem)}</div><b>授課教師</b><div>${c.teacher||"—"}</div>${c.unit?`<b>開課單位</b><div>${c.unit}</div>`:""}<b>修課人數</b><div>${c.n?c.n+" 人":"115-1 選課中"}</div>${c.micro?`<b>微學程</b><div>${c.micro.join("、")}</div>`:""}<b>課程簡介</b><div>${c.desc}</div>`;
+    document.getElementById("selHint").innerHTML=`已選取：<b>${c.name}</b>（全校探索跨域｜${c.domain}）`;
+  }else{
+    document.getElementById("selBadge").textContent=`${typeLabel(c.type)}｜${c.recYear||""}`;
+    kv.innerHTML=`<b>課程名稱</b><div>${c.name}</div><b>類型</b><div>${typeLabel(c.type)}</div><b>建議年級</b><div>${c.year===0?"模組（跨年級）":`大${["","一","二","三","四"][c.year]}`}</div><b>對應軌道</b><div>${c.track}</div>`;
+    document.getElementById("selHint").innerHTML=`已選取：<b>${c.name}</b>（藝設系｜${c.track}）`;
+  }
+  const uel=document.getElementById("cUCAN");uel.innerHTML="";
+  (c.ucan||[]).forEach(u=>{const match=(ucanData[u]||50)>=55;const sp=document.createElement("span");sp.className="chip";sp.style.borderColor=match?"rgba(69,209,158,.5)":"rgba(122,162,255,.35)";sp.style.background=match?"rgba(69,209,158,.12)":"rgba(122,162,255,.12)";sp.textContent=`${u} PR${ucanData[u]||50}${match?" ✓":""}`;uel.appendChild(sp);});
+  document.getElementById("cExtTitle").textContent=isExplore(c)?"建議搭配課程（跨層推薦）":"建議搭配：全校探索跨域課程";
+  const recs=recommendCross(c);
+  const ewrap=document.getElementById("cExternalWrap");ewrap.style.display="block";
+  const eEl=document.getElementById("cExternal");eEl.innerHTML="";
+  recs.forEach((r,i)=>{const d=document.createElement("div");d.className="reco-item";d.style.marginBottom="8px";d.innerHTML=`<div class="top"><div class="name">${i+1}. ${r.name}</div><div class="badge">${r.badge}</div></div><div class="why">${r.why}</div>`;eEl.appendChild(d);});
+  suggestCourseQuestion(c);
+}
+
+function resetDetail(){
+  document.getElementById("selBadge").textContent="點選左側課程";
+  document.getElementById("courseKV").style.display="none";
+  document.getElementById("courseKV").innerHTML="";
+  document.getElementById("cUCAN").innerHTML="";
+  document.getElementById("cExternalWrap").style.display="none";
+  document.getElementById("selHint").textContent="點選課程卡片後，此處顯示能力對應（UCAN）與跨層修課建議。";
+}
+
+function resetMap(){
+  selectedCourseId=null;
+  document.getElementById("search").value="";
+  document.getElementById("filterType").value="all";
+  document.getElementById("filterYear").value="all";
+  applyFilters();resetDetail();
+}
+
+function randomPick(){
+  const visible=[...document.querySelectorAll(".pill")].filter(p=>p.style.display!=="none");
+  if(!visible.length) return;
+  selectCourse(visible[Math.floor(Math.random()*visible.length)].dataset.id);
+}
+
+/* ============================================================
+   AI 對話
+   ============================================================ */
+function buildSystemPrompt(){
+  const {ability,selfReg}=computeAxes();
+  const ranked=pickTracks();
+  const insights=buildInsights().map(c=>c.text);
+  const ucanStr=UCAN_DIMS.map(d=>`  ${d}：PR ${ucanData[d]||50}`).join("\n");
+  const recoStr=ranked.slice(0,3).map((t,i)=>`  ${i+1}. ${t.key}（適配度 ${Math.round(t.score*100)}%）—— ${t.desc}`).join("\n");
+  const matchedExplore=EXPLORE_COURSES.filter(c=>isUCANMatch(c)).map(c=>`${c.name}（${c.domain}）`).slice(0,8).join("、");
+  const matchedDept=COURSES.filter(c=>isUCANMatch(c)).map(c=>c.name).slice(0,6).join("、");
+  const exploreList=DOMAINS.map(([d])=>`  ${d}：${EXPLORE_COURSES.filter(c=>c.domain===d).map(c=>c.name).filter((v,i,a)=>a.indexOf(v)===i).join("、")}`).join("\n");
+
+  return `你是「跨域自主配速員（UCAN Learning Pacer）」，元智大學的全校 AI 學習顧問，由教務處與藝術與設計學系共同推動。
+你依據學生的 UCAN 共通職能 PR 數值，提供個人化、可解釋的跨域修課建議。
+
+【學生 UCAN 資料】
+${ucanStr}
+
+計算向度：
+  能力向度（問題解決+創新平均）：${ability.toFixed(1)}
+  自律向度（持續學習+責任紀律平均）：${selfReg.toFixed(1)}
+
+推薦路線 Top 3：
+${recoStr}
+
+學習洞察：
+${insights.map(t=>`  - ${t}`).join("\n")}
+
+【課程地圖：兩層】
+一、全校探索跨域課程（教務處，1 學分微課程，六領域）：
+${exploreList}
+二、藝設系課程地圖（系級示範層，年級 × 六軌）。
+
+與此學生 UCAN 優勢匹配（PR≥55 向度）：
+  探索跨域：${matchedExplore||"（無）"}
+  藝設系：${matchedDept||"（無）"}
+
+【回答原則】
+1. 繁體中文，語氣親切務實，直接給建議；用純文字回答，不要使用 Markdown 符號（如 ** 或 #）
+2. 回答聚焦 1~2 個重點，3~6 行為佳
+3. 說明「為什麼」——對應哪個 UCAN 向度
+4. 優先從「全校探索跨域課程」給建議（不分科系都可修）；若學生是藝設系，可搭配系級課程
+5. 結尾可給一個本週可執行的「小任務」
+6. 若學生問到某門課，直接說是否適合、理由是什麼`;
+}
+
+function pushBubble(text,cls){
+  const log=document.getElementById("chatlog");
+  const b=document.createElement("div");b.className=`bubble ${cls}`;b.textContent=text;
+  log.appendChild(b);log.scrollTop=log.scrollHeight;return b;
+}
+
+function setLoading(v){
+  isLoading=v;
+  document.getElementById("chatSend").disabled=v;
+  document.getElementById("chatInput").disabled=v;
+}
+
+function getApiKey(){return localStorage.getItem("pacer_gemini_key")||localStorage.getItem("pacer_api_key")||""}
+function setApiKey(){
+  const cur=getApiKey();
+  const k=prompt("輸入 Gemini API 金鑰（AIza 開頭，可於 Google AI Studio 免費取得）\n只會儲存在你這台電腦的瀏覽器 localStorage，不會寫入檔案。",cur?cur.slice(0,10)+"…（已設定，重貼可更換）":"");
+  if(k===null) return;
+  const v=k.trim();
+  if(v.startsWith("AIza")){localStorage.setItem("pacer_gemini_key",v);localStorage.removeItem("pacer_api_key");updateKeyBtn();pushBubble("✅ 金鑰已設定，可以開始對話了！","bot");}
+  else if(v===""){localStorage.removeItem("pacer_gemini_key");localStorage.removeItem("pacer_api_key");updateKeyBtn();pushBubble("已清除金鑰。","bot");}
+  else pushBubble("⚠ 金鑰格式不對（Gemini 金鑰應為 AIza 開頭），未儲存。","bot");
+}
+function updateKeyBtn(){
+  const b=document.getElementById("keyBtn");
+  if(!b) return;
+  if(GAS_URL){ b.style.display="none"; return; }
+  b.textContent=getApiKey()?"🔑✓":"🔑";
+}
+
+async function sendChat(){
+  if(isLoading) return;
+  const input=document.getElementById("chatInput");
+  const q=input.value.trim();if(!q) return;
+  if(!GAS_URL && !getApiKey()){
+    pushBubble(q,"me");input.value="";
+    pushBubble("還沒設定 API 金鑰 🔑\n\n請點右上角「🔑」按鈕貼上 Gemini API 金鑰（AIza 開頭，Google AI Studio 免費申請），設定一次即可。金鑰只存在你這台電腦的瀏覽器。","bot");
+    return;
+  }
+  input.value="";pushBubble(q,"me");setLoading(true);
+  chatHistory.push({role:"user",content:q});
+  const typing=pushBubble("正在思考中…","bot typing");
+  try{
+    if(GAS_URL){
+      /* 中繼模式：金鑰在 GAS Script Properties，學生端零設定 */
+      const res=await fetch(GAS_URL,{
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body:JSON.stringify({system:buildSystemPrompt(),messages:chatHistory,source:"pacer-web"})
+      });
+      const data=await res.json();
+      if(data.error) throw new Error(data.error);
+      const reply=data.reply||"（無回應）";
+      chatHistory.push({role:"assistant",content:reply});
+      typing.textContent=reply;typing.classList.remove("typing");
+      return;
+    }
+    const contents=chatHistory.map(m=>({role:m.role==="assistant"?"model":"user",parts:[{text:m.content}]}));
+    const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "x-goog-api-key":getApiKey()
+      },
+      body:JSON.stringify({
+        system_instruction:{parts:[{text:buildSystemPrompt()}]},
+        contents,
+        generationConfig:{maxOutputTokens:2048,thinkingConfig:{thinkingBudget:0}}
+      })
+    });
+    if(!res.ok){
+      const err=await res.json().catch(()=>({}));
+      throw new Error(`HTTP ${res.status}：${err.error?.message||"請檢查金鑰是否有效"}`);
+    }
+    const data=await res.json();
+    let reply=data.candidates?.[0]?.content?.parts?.map(p=>p.text).join("")||"（無回應）";
+    reply=reply.replace(/\*\*(.+?)\*\*/g,"$1").replace(/^#{1,4}\s*/gm,"").replace(/^\s*\*\s+/gm,"• ").trim();
+    if(data.candidates?.[0]?.finishReason==="MAX_TOKENS") reply+="\n（回答過長被截斷，可請我「繼續」）";
+    chatHistory.push({role:"assistant",content:reply});
+    typing.textContent=reply;typing.classList.remove("typing");
+  }catch(e){
+    typing.textContent=`⚠ 無法取得回應：${e.message}`;
+    typing.classList.remove("typing");chatHistory.pop();
+  }finally{setLoading(false);document.getElementById("chatlog").scrollTop=9999;}
+}
+
+function suggestCourseQuestion(course){
+  const input=document.getElementById("chatInput");
+  input.value=`「${course.name}」這門課適合我嗎？為什麼？`;
+}
+
+function initChat(){
+  updateKeyBtn();
+  chatHistory=[];
+  const log=document.getElementById("chatlog");log.innerHTML="";
+  const {ability,selfReg}=computeAxes();
+  pushBubble(`你好！我是你的 AI 學習顧問 ✦\n\n已載入你的 UCAN 輪廓：能力向度 ${ability.toFixed(1)}、自律向度 ${selfReg.toFixed(1)}。\n\n可以問我路線選擇、課程建議、跨院搭配，或直接點左側課程讓我分析是否適合你！`,"bot");
+  const qWrap=document.getElementById("quickBtns");qWrap.innerHTML="";
+  ["我最適合哪條路線？","探索跨域課怎麼選？","我的弱點在哪裡？","跨院課怎麼搭配？"].forEach(q=>{
+    const btn=document.createElement("button");btn.className="qbtn";btn.textContent=q;
+    btn.onclick=()=>{document.getElementById("chatInput").value=q;sendChat();};
+    qWrap.appendChild(btn);
+  });
+}
+
+/* ============================================================
+   步驟切換
+   ============================================================ */
+function goStep(n){
+  [1,2,3].forEach(i=>{
+    document.getElementById(`page${i}`).classList.toggle("active",i===n);
+    const btn=document.getElementById(`sBtn${i}`);
+    btn.classList.remove("active","done");
+    if(i===n) btn.classList.add("active");
+    else if(i<n) btn.classList.add("done");
+    if(i>1&&Object.keys(ucanData).length===0) btn.disabled=true;
+    else btn.disabled=false;
+  });
+  if(n===3){switchMode(mapMode);initChat();}
+}
+
+/* init */
+loadPreset("design"); // 預設範例值
+buildUCANInputs();
+</script>
+</body>
+</html>
